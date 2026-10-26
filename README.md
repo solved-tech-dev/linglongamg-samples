@@ -1,91 +1,91 @@
-# LinglongAMG 通用 C 测试样例
+# LinglongAMG Portable C Sample
 
-## 文件
+## Files
 
 ```text
 LinglongAMG_sample/
-|-- linglongamg_test.c          # 通用测试主程序，按 C11 编译
-|-- sample_runtime.h           # 平台适配的 C 接口
-|-- sample_runtime.cpp         # GPU 内存/同步适配，不包含 AMG 算法
+|-- linglongamg_test.c          # Portable test program, compiled as C11
+|-- sample_runtime.h           # C interface for the runtime adapter
+|-- sample_runtime.cpp         # GPU memory and synchronization adapter
 |-- Makefile
 |-- README.md
-|-- spe10.cbd                  # 1,094,421 行，7,478,141 个非零元
+|-- spe10.cbd                  # 1,094,421 rows and 7,478,141 nonzeros
 `-- linglongamg_config.json
 ```
 
-本包不包含 `.so`、授权文件或 AMG 内核源码。测试主程序始终用 C 编译器编译。平台运行时适配文件单独用 C++ 编译器编译（SYCL 本身是 C++ API），最后链接对应平台已有的 `liblinglongamg.so`。不要将主程序当作 C++ 源码编译。
+This package does not include shared libraries, license files, or AMG kernel source code. The main test program is compiled with a C compiler. The runtime adapter is compiled separately with a C++ compiler (SYCL provides a C++ API), then linked against the existing `liblinglongamg.so` for the selected platform. Do not compile the main program as C++.
 
-## 准备
+## Prerequisites
 
-使用目标平台、架构、运行时版本匹配的 LinglongAMG SDK，目录如下：
+Use a LinglongAMG SDK that matches your hardware, architecture, and runtime version. The default directory layout is:
 
 ```text
 work/
 |-- LinglongAMG/
 |   |-- lib/linglongamg.h
 |   |-- lib/liblinglongamg.so
-|   `-- ...                    # 保留完整 SDK 的授权及其他运行文件
+|   `-- ...                    # Keep all SDK authorization and runtime files
 `-- LinglongAMG_sample/
 ```
 
-授权按对应 SDK 的说明配置，保留其完整运行环境；样例不会绕过库内鉴权。需要该 GPU 的有效 license 及 SDK 所要求的其他鉴权材料。所有路径均可通过变量指定，没有开发机器的固定绝对路径。
+Configure authorization according to the SDK instructions and retain its complete runtime environment. The sample does not bypass library authorization. A valid license for the selected GPU and any additional authorization files required by the SDK must be available. Paths are configurable; no developer-specific absolute paths are embedded.
 
-进入样例目录，加载匹配平台工具链，再编译。`AMG_ROOT` 默认为 `../LinglongAMG`。头文件必须使用同一 SDK 的版本；本样例支持公共接口 `license_check/create_from_config/read_csr/setup/solve/get_solve_info` 及 FP64 类型。
+Enter the sample directory and load the matching toolchain before building. `AMG_ROOT` defaults to `../LinglongAMG`. Use the header supplied with the same SDK as the library. The sample requires FP64 types and the public `linglongamg_` APIs: `license_check`, `create_from_config`, `read_csr`, `setup`, `solve`, and `get_solve_info`.
 
-## 平台选择及编译
+## Platform Selection and Build
 
-| PLATFORM | 硬件/工具链 | 传给库的数组 |
+| PLATFORM | Hardware / toolchain | Arrays passed to the library |
 |---|---|---|
-| CUDA | NVIDIA，CUDA 12.4/12.9/13.1 对应 SDK | CUDA 设备数组 |
-| HIP | 海光 Z100、BW1000（对应 DTK），AMD（对应 ROCm） | HIP 设备数组 |
-| HCR | X201 / HPCC 3.5.3.18，aarch64 | HPCC CUDA bridge 设备数组 |
-| MUSA | 摩尔线程 / MUSA 5.1 | MUSA 设备数组 |
+| CUDA | NVIDIA; matching CUDA 12.4, 12.9, or 13.1 SDK | CUDA device arrays |
+| HIP | Hygon Z100 or BW1000 with matching DTK; AMD with matching ROCm | HIP device arrays |
+| HCR | X201 / HPCC 3.5.3.18, aarch64 | HPCC CUDA bridge device arrays |
+| MUSA | Moore Threads / MUSA 5.1 | MUSA device arrays |
 | SYCL | Intel / oneAPI 2026.1 | SYCL shared USM |
-| OPENCL | 砺算 / 对应 OpenCL SDK | 主机数组，由 AMG 库管理 GPU 数据 |
+| OPENCL | Lisuan / matching OpenCL SDK | Host arrays; the AMG library manages GPU data |
 
-NVIDIA（先设置/加载 `CUDA_HOME`）：
+NVIDIA: load the CUDA environment and set `CUDA_HOME` first.
 
 ```bash
 make PLATFORM=CUDA CUDA_ROOT="$CUDA_HOME"
 ```
 
-Z100、BW1000 和 AMD（加载对应 DTK/ROCm，使 hipcc 可用）：
+Z100, BW1000, and AMD: load the matching DTK or ROCm environment so that `hipcc` is available.
 
 ```bash
 make PLATFORM=HIP HIPCXX=hipcc
 ```
 
-X201（在 aarch64 环境编译，先设置/加载 `HPCC_PATH`）：
+X201: build in an aarch64 environment with `HPCC_PATH` configured.
 
 ```bash
 make PLATFORM=HCR HPCC_ROOT="$HPCC_PATH"
 ```
 
-摩尔线程（先设置/加载 `MUSA_HOME`）：
+Moore Threads: load the MUSA environment and set `MUSA_HOME` first.
 
 ```bash
 make PLATFORM=MUSA MUSA_ROOT="$MUSA_HOME"
 ```
 
-Intel（先加载 oneAPI 环境）：
+Intel: load the oneAPI environment first.
 
 ```bash
 make PLATFORM=SYCL SYCLCXX=icpx
 ```
 
-砺算（先加载 OpenCL/驱动和库所需依赖）：
+Lisuan: load the OpenCL runtime, driver, and library dependencies first.
 
 ```bash
 make PLATFORM=OPENCL
 ```
 
-按需追加 `AMG_ROOT=../YourSDK`、`CC=gcc`、`CXX=g++`。`CC` 必须是目标平台 C 编译器，不能设置成 hipcc/icpx 等 C++ 驱动。X201 的对象文件和 SDK 都必须是 aarch64。CUDA 库目录不是 `lib64` 时指定 `CUDA_LIBDIR`；MUSA 不是 `lib` 时指定 `MUSA_LIBDIR`。拆分安装的工具链可通过 `CPPFLAGS`、`LDFLAGS`、`LIBRARY_PATH` 补充搜索目录。
+Add `AMG_ROOT=../YourSDK`, `CC=gcc`, or `CXX=g++` as needed. `CC` must be a C compiler for the target platform; do not set it to a C++ driver such as `hipcc` or `icpx`. X201 requires aarch64 object files and an aarch64 SDK. Set `CUDA_LIBDIR` if CUDA libraries are not in `lib64`, or `MUSA_LIBDIR` if MUSA libraries are not in `lib`. For toolchains installed across multiple directories, use `CPPFLAGS`, `LDFLAGS`, and `LIBRARY_PATH` to supply additional search paths.
 
-一次编译只链接一个平台的库，不存在跨 GPU 厂商通用的单个可执行文件。DTK 三个版本分别加载对应运行时、链接对应 SDK 后编译；Z100 和 BW1000 的库不能混用。
+Each build links one platform's library. A single executable does not support all GPU vendors. For each DTK version, load the matching runtime and link the matching SDK before building. Do not interchange Z100 and BW1000 libraries.
 
-## 运行
+## Run
 
-保留已加载的厂商运行时环境，并添加 SDK 库目录：
+Keep the vendor runtime environment loaded and add the SDK library directory:
 
 ```bash
 export LD_LIBRARY_PATH="../LinglongAMG/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
@@ -93,44 +93,49 @@ export LD_LIBRARY_PATH="../LinglongAMG/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 ./linglongamg_test_CUDA -A ./spe10.cbd -c ./linglongamg_config.json --rtol 1e-6 --device 0
 ```
 
-其他平台把可执行文件后缀换成 `HIP`、`HCR`、`MUSA`、`SYCL` 或 `OPENCL`，例如：
+For other platforms, replace the executable suffix with `HIP`, `HCR`, `MUSA`, `SYCL`, or `OPENCL`. For example:
 
 ```bash
 ./linglongamg_test_HIP -A ./spe10.cbd -c ./linglongamg_config.json
 ```
 
-默认矩阵和配置从当前工作目录读取；`-A`、`-c` 可以指定其他路径。CUDA/HIP/MUSA/HCR 的 `--device` 是进程可见的 GPU 序号。SYCL 使用与现有 SDK 示例一致的 GPU selector，保持 `--device 0`，需指定 GPU 时用 oneAPI 环境的 `ONEAPI_DEVICE_SELECTOR` 限定可见设备；OPENCL 库内部选卡，样例只接受 `--device 0`。
+The default matrix and configuration are read from the current working directory. Use `-A` and `-c` to specify other paths. On CUDA, HIP, MUSA, and HCR, `--device` selects a GPU by its process-visible ordinal. SYCL uses the GPU selector from the existing SDK sample: keep `--device 0` and use `ONEAPI_DEVICE_SELECTOR` in the oneAPI environment to restrict visible devices when needed. The OpenCL library selects its GPU internally; the sample accepts only `--device 0` for that platform.
 
-只检查 CBD 文件而不执行求解：
+To check the CBD input without solving:
 
 ```bash
 ./linglongamg_test_CUDA --check-input
 ```
 
-此模式不代表 GPU、鉴权或数值求解已通过。可执行文件仍需要对应动态库可加载。
+This mode does not validate GPU execution, authorization, or numerical convergence. The executable still requires its shared-library dependencies to be loadable.
 
-## 配置与求解流程
+## Configuration and Solver Workflow
 
-附带配置采用共同支持的 GMRES(10) + AMG、L1-Jacobi、V-cycle，前/后/最粗平滑 2/2/2，最多 50 层、粗层阈值 2、强连接阈值 0.25，求解容差 1e-6。SpMV 和向量操作显式选用 manual，以避免跨平台依赖不同厂商稀疏算子。它不是各发行包原默认配置的逐字副本；比较历史性能时必须使用相同配置与硬件。
+The included configuration uses GMRES(10) with AMG, L1-Jacobi smoothing, and a V-cycle. It specifies 2/2/2 pre/post/coarsest smoothing sweeps, at most 50 levels, a coarse-size threshold of 2, a strong-connection threshold of 0.25, and a solver tolerance of 1e-6. SpMV and vector operations explicitly use `manual` to avoid relying on different vendor sparse operators across platforms. This configuration is not an exact copy of every release package's defaults. Use identical configurations and hardware when comparing historical performance.
 
-1. 读取完整 CSR CBD，校验索引和数值，排序每行列号；重复列号需预先合并。
-2. 构造 `b=A*ones` 和零初值，准备该平台要求的数组。
-3. `linglongamg_create_from_config` 读取 JSON，并执行库的前置鉴权。
-4. `linglongamg_read_csr` 建立描述符；执行 setup、solve。
-5. 求解完成后调用 `linglongamg_get_solve_info`；成功后才读取 x。
-6. 使用原矩阵及原 b 独立计算 `||b-Ax||2/||b||2`，检查 b 未被修改。
+1. Read the full-CSR CBD input, validate indices and values, and sort column indices within each row. Duplicate column entries must be merged before use.
+2. Construct `b=A*ones` and a zero initial guess, then prepare the arrays required by the platform.
+3. Call `linglongamg_create_from_config` to load JSON settings and perform the library's initial authorization check.
+4. Call `linglongamg_read_csr` to create the matrix descriptor, then run setup and solve.
+5. Call `linglongamg_get_solve_info` after solve completes. Read x only after this call succeeds.
+6. Independently compute `||b-Ax||2/||b||2` using the original matrix and b, and verify that b has not changed.
 
-CBD 数据布局为小端 int32 行数、int32 列数、int64 非零数、int64 行指针（行数+1）、int32 列号、FP64 数值。索引从 0 开始，矩阵必须为非空方阵，当前接口要求索引和非零数在 int32 范围内。b 为测试程序生成，不从 CBD 读取；JSON 的 RHS 默认值不覆盖显式传入的 b。
+The CBD layout is little-endian: int32 row count, int32 column count, int64 nonzero count, int64 row pointers (row count + 1), int32 column indices, and FP64 values. Indices are zero-based. The matrix must be nonempty and square; indices and the nonzero count must fit within the current int32 API limits. The test program generates b rather than reading it from CBD. JSON RHS defaults do not override the explicitly supplied b.
 
-`--rtol` 控制样例的独立 L2 相对残差验收，不改变 JSON 求解精度。若更换求解容差或范数，应同时考虑独立验收阈值。零 RHS 的相对残差显示 NaN，仅绝对残差为零时通过。
+`--rtol` controls the sample's independent relative L2 residual acceptance threshold; it does not change the JSON solver tolerance. When changing the solver tolerance or norm, also consider the independent acceptance threshold. For a zero RHS, the relative residual is undefined (NaN); acceptance requires an exactly zero absolute residual.
 
-## 输出与退出码
+## Output and Exit Codes
 
-正常运行的输出与参考 SDK 测试文件保持一致：先显示 `Licensee: ...` 和 `Status: Valid.`，随后保留库自身输出的层级、迭代和最终状态信息。样例不额外打印矩阵摘要、setup/solve/query 时间、独立残差摘要或 verification 行，也不重复打印库的最终状态。库自身表格中的耗时不做过滤。
+Normal output follows the SDK sample: `Licensee: ...` and `Status: Valid.` appear first, followed by the library's own hierarchy, iteration, and final-status output. The sample does not add matrix summaries, setup/solve/query timings, independent residual summaries, or verification-success lines. It does not repeat the library's final status. Timing fields already printed in the library's tables are retained.
 
-独立残差验证仍然执行，通过时保持静默；不通过时向标准错误输出 `Solution check failed` 和残差。授权失败输出 `Licensee: Unknown`、`Status: Invalid.` 并停止。`--check-input` 是单独的输入检查模式，仍打印检查结果。
-退出码 0：独立残差通过（或仅输入检查通过）；2：未达到独立残差标准；1：输入、运行时、接口或授权错误。
+Independent residual verification still runs and remains silent on success. On failure, it writes `Solution check failed` and the residual to standard error. Authorization failure prints `Licensee: Unknown` and `Status: Invalid.`, then stops. The separate `--check-input` mode still prints its input-check result.
 
-## 本次验证范围
+Exit codes:
 
-CUDA 分支通过真实 C 编译、C++ 适配编译、共享库链接和实际 spe10 输入检查；OpenCL 主机数组适配通过编译。其他分支依据现有各平台 SDK 示例接入，尚未完成该通用样例在全部厂商工具链上的编译与实机求解验收。不能据此声称所有平台已求解通过或给出性能成绩。
+- `0`: independent residual verification passed, or input checking passed in `--check-input` mode.
+- `2`: the independent residual acceptance criterion was not met.
+- `1`: an input, runtime, API, or authorization error occurred.
+
+## Validation Status
+
+The CUDA branch has passed C compilation, C++ adapter compilation, shared-library linking, and input checking with the actual spe10 matrix. The OpenCL host-array adapter has passed compilation. The remaining branches were adapted from the existing platform SDK samples; this portable sample has not yet completed compilation and GPU solve validation across all vendor toolchains. These checks do not establish successful solves on every platform or provide performance results.
