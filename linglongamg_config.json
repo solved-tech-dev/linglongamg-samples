@@ -1,0 +1,31 @@
+{
+  "config_version": 2,
+  "setup": {
+    "max_levels": 50,
+    "min_coarse_size": 2,
+    "strong_threshold": 0.25,
+    "presweeps": 2,
+    "postsweeps": 2,
+    "coarsest_sweeps": 2,
+    "jacobi_omega": 1.0,
+    "interp_max_elements": 4,
+    "rap_method": "onestep"
+  },
+  "solve": {
+    "method": "gmres",
+    "cycle": "v",
+    "smoother": "jacobi_l1",
+    "convergence": "rel_ini",
+    "norm": "l2",
+    "preconditioner": "amg",
+    "max_iters": 100,
+    "tolerance": 1e-06,
+    "gmres_restart": 10,
+    "print_level": 2,
+    "rhs_value": 1.0,
+    "x0_value": 0.0,
+    "spmv_backend": "manual",
+    "vector_backend": "manual",
+    "coarse_solver": "smooth_only"
+  }
+}
