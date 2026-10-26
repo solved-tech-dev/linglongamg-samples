@@ -1,7 +1,5 @@
 # LinglongAMG 通用 C 测试样例
 
-参考 `LinglongAMG(2).7z` 中的测试程序，保留 CBD 输入、`b=A*ones`、零初值及公共 C 接口调用流程，保留静默的独立残差验证。面向 Linux、FP64 的 LinglongAMG 共享库。
-
 ## 文件
 
 ```text
