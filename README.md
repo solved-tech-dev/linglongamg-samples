@@ -30,6 +30,14 @@ work/
 
 Configure authorization according to the SDK instructions and retain its complete runtime environment. The sample does not bypass library authorization. A valid license for the selected GPU and any additional authorization files required by the SDK must be available. Paths are configurable; no developer-specific absolute paths are embedded.
 
+Check the host C library before choosing an SDK:
+
+```bash
+getconf GNU_LIBC_VERSION
+```
+
+Some LinglongAMG packages include a `compat/` directory for systems whose glibc is older than the library requirement. When that directory is present, `make run` automatically starts the sample through `compat/run`. The compatibility files are isolated in the package and do not replace the system C library. See [Troubleshooting](docs/TROUBLESHOOTING.md) for loader errors and MPI process boundaries.
+
 Enter the sample directory and load the matching toolchain before building. `AMG_ROOT` defaults to `../LinglongAMG`. Use the header supplied with the same SDK as the library. The sample requires FP64 types and the public `linglongamg_` APIs: `license_check`, `create_from_config`, `read_csr`, `setup`, `solve`, and `get_solve_info`.
 
 ## Platform Selection and Build
@@ -98,6 +106,21 @@ For other platforms, replace the executable suffix with `HIP`, `HCR`, `MUSA`, `S
 ```bash
 ./linglongamg_test_HIP -A ./spe10.cbd -c ./linglongamg_config.json
 ```
+
+The recommended make target selects a package-local compatibility runtime when available:
+
+```bash
+make PLATFORM=HIP run
+```
+
+For another executable or an MPI application, start every process that loads LinglongAMG through the runner:
+
+```bash
+../LinglongAMG/compat/run ./your-program
+mpiexec -n N ../LinglongAMG/compat/run ./your-program
+```
+
+The runner must start the process before the program loads LinglongAMG. It cannot change glibc in a Python, JVM, MPI rank, or other process that has already started. If no compatible runner is provided, use a package built for the host glibc baseline.
 
 The default matrix and configuration are read from the current working directory. Use `-A` and `-c` to specify other paths. On CUDA, HIP, MUSA, and HCR, `--device` selects a GPU by its process-visible ordinal. SYCL uses the GPU selector from the existing SDK sample: keep `--device 0` and use `ONEAPI_DEVICE_SELECTOR` in the oneAPI environment to restrict visible devices when needed. The OpenCL library selects its GPU internally; the sample accepts only `--device 0` for that platform.
 

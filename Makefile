@@ -10,6 +10,7 @@ MUSA_ROOT ?= $(MUSA_HOME)
 MUSA_LIBDIR ?= $(MUSA_ROOT)/lib
 CUDA_LIBDIR ?= $(CUDA_ROOT)/lib64
 HPCC_ROOT ?= $(HPCC_PATH)
+COMPAT_RUN ?= $(if $(wildcard $(AMG_ROOT)/compat/run),$(AMG_ROOT)/compat/run)
 OBJDIR := .sample-build/$(PLATFORM)
 EXE := linglongamg_test_$(PLATFORM)
 CPPFLAGS += -I$(AMG_ROOT)/lib
@@ -59,6 +60,6 @@ $(OBJDIR)/runtime.o: sample_runtime.cpp sample_runtime.h FORCE | $(OBJDIR)
 $(EXE): $(OBJDIR)/main.o $(OBJDIR)/runtime.o
 	$(DRIVER) $^ $(LDFLAGS) $(LINKFLAGS) $(LIBS) -o $@
 run: $(EXE)
-	./$(EXE) $(ARGS)
+	$(if $(COMPAT_RUN),"$(COMPAT_RUN)") ./$(EXE) $(ARGS)
 clean:
 	rm -f $(OBJDIR)/main.o $(OBJDIR)/runtime.o $(EXE)
